@@ -43,6 +43,11 @@ def generate_sensor_data():
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (reading['device_id'], reading['timestamp'], reading['voltage'], reading['current'], reading['power'], reading['energy_kwh'], reading['temperature']))
         
+        c.execute('''
+            INSERT INTO events (device_id, event_type, message, timestamp)
+            VALUES (?, ?, ?, ?)
+        ''', (reading['device_id'], 'SENSOR_UPDATE', f"New IoT sensor reading received ({reading['power']} W)", reading['timestamp']))
+        
     conn.commit()
     conn.close()
     return readings

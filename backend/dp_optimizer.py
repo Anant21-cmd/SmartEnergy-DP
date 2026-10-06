@@ -62,6 +62,12 @@ def optimize_energy(energy_budget):
         INSERT INTO optimization_results (energy_budget, total_energy_used, total_cost, devices_selected, optimization_score)
         VALUES (?, ?, ?, ?, ?)
     ''', (energy_budget, total_energy_used, estimated_cost, json.dumps(selected_devices), optimization_score))
+    
+    c.execute('''
+        INSERT INTO events (device_id, event_type, message)
+        VALUES (?, ?, ?)
+    ''', ('SYSTEM', 'OPTIMIZATION', f"Energy optimization completed. Saved {energy_budget - total_energy_used} W"))
+    
     conn.commit()
     conn.close()
     

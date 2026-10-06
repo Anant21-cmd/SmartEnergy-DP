@@ -183,11 +183,42 @@ def receive_sensor_data():
         INSERT INTO sensor_readings (device_id, timestamp, voltage, current, power, energy_kwh, temperature)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     ''', (device_id, timestamp, voltage, current, power, energy_kwh, temp))
+    c.execute('''
+        INSERT INTO events (device_id, event_type, message, timestamp)
+        VALUES (?, ?, ?, ?)
+    ''', (device_id, 'MQTT_DATA', f"Data received via Node-RED ({power} W)", timestamp))
+    
     conn.commit()
     conn.close()
     
     print(f"[Node-RED -> Flask] Saved sensor data for {device_id}")
     return jsonify({"success": True, "message": "Data saved successfully"})
+
+@app.route('/api/search', methods=['GET'])
+def search_devices():
+    query = request.args.get('q', '').lower()
+    conn = get_db_connection()
+    c = conn.cursor()
+    # Search in devices table
+    devices = c.execute('SELECT * FROM devices WHERE lower(device_id) LIKE ? OR lower(device_name) LIKE ? OR lower(status) LIKE ? OR lower(location) LIKE ?', 
+                        (f'%{query}%', f'%{query}%', f'%{query}%', f'%{query}%')).fetchall()
+    
+    results = []
+    for d in devices:
+        dev = dict(d)
+        latest_sensor = c.execute('SELECT * FROM sensor_readings WHERE device_id = ? ORDER BY id DESC LIMIT 1', (dev['device_id'],)).fetchone()
+        if latest_sensor:
+            dev.update(dict(latest_sensor))
+        results.append(dev)
+    conn.close()
+    return jsonify(results)
+
+@app.route('/api/recent-events', methods=['GET'])
+def get_recent_events():
+    conn = get_db_connection()
+    events = conn.execute('SELECT * FROM events ORDER BY id DESC LIMIT 10').fetchall()
+    conn.close()
+    return jsonify([dict(e) for e in events])
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True, use_reloader=False)

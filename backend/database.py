@@ -56,6 +56,17 @@ def init_db():
         )
     ''')
     
+    # Events table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT,
+            event_type TEXT,
+            message TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
     # Insert Sample Devices if table is empty
     c.execute('SELECT COUNT(*) FROM devices')
     if c.fetchone()[0] == 0:
